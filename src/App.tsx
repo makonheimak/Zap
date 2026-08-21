@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import PacketField from "./components/PacketField";
 import Inspector from "./components/Inspector";
 import Reveal from "./components/Reveal";
+import Console from "./components/Console";
 import {
   buildSmartLauncher,
   buildUniversalLauncher,
@@ -37,7 +38,7 @@ const STEPS = [
   {
     n: "02",
     t: "Положи zapret-vse.bat в корень",
-    d: "Скопируй скачанный файл в корень папки zapret — туда, где лежат bin\\ и lists\\. Это единственный файл, который тебе понадобится.",
+    d: "Скопируй скачанный файл в корень распакованной папки zapret — туда, где лежит binaries\\. Движок он найдёт сам.",
     c: "text-live-400 border-live-500/50",
   },
   {
@@ -265,6 +266,19 @@ export default function App() {
         </div>
       </section>
 
+      {/* ===== console launch ===== */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
+        <Reveal>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="font-display text-[clamp(20px,2.6vw,30px)] font-bold tracking-tight text-paper">
+              Запуск <span className="text-live-400">через консоль</span>
+            </h2>
+            <span className="font-mono text-[11px] text-mist-500">введи свой путь — команды обновятся</span>
+          </div>
+        </Reveal>
+        <Console />
+      </section>
+
       {/* ===== live inspector ===== */}
       <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
@@ -289,7 +303,9 @@ export default function App() {
                 </li>
               </ul>
               <p className="mt-1 border-t border-ink-700 pt-3 font-mono text-[11.5px] text-mist-500">
-                Единственное требование: рядом должен лежать <span className="text-mist-300">bin\winws.exe</span> из zapret.
+                Единственное требование: батник лежит в папке zapret — движок{" "}
+                <span className="text-mist-300">winws.exe</span> он найдёт сам, даже в{" "}
+                <span className="text-mist-300">binaries\windows-x86_64\winws\</span>.
               </p>
             </div>
           </Reveal>
