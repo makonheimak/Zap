@@ -59,6 +59,7 @@ export default function App() {
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 0xffffffff));
   const [fired, setFired] = useState(false);
   const [pressing, setPressing] = useState(false);
+  const [floatDone, setFloatDone] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
 
   const hex = buildHex(seed);
@@ -84,6 +85,13 @@ export default function App() {
   const reshuffle = () => {
     setSeed(Math.floor(Math.random() * 0xffffffff));
     setFired(false);
+  };
+
+  const floatDownload = () => {
+    download("zapret-vse.bat", buildUniversalLauncher(seed));
+    setFired(true);
+    setFloatDone(true);
+    setTimeout(() => setFloatDone(false), 3200);
   };
 
   useEffect(() => {
@@ -311,6 +319,37 @@ export default function App() {
           </Reveal>
         </div>
       </section>
+
+      {/* ===== floating download — всегда видна ===== */}
+      <button
+        onClick={floatDownload}
+        aria-label="Скачать zapret-vse.bat"
+        className={`group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-full border px-5 py-3.5 shadow-[0_14px_44px_-10px_rgba(255,122,41,0.55)] transition-all duration-200 hover:-translate-y-1 active:scale-95 ${
+          floatDone
+            ? "border-live-500/70 bg-ink-850 text-live-400"
+            : "border-signal-400/60 bg-gradient-to-br from-signal-600 via-signal-500 to-signal-400 text-ink-950"
+        }`}
+      >
+        <span className="anim-pulse-dot absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-ink-950 bg-live-500" />
+        {floatDone ? (
+          <>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+              <path d="M4 12.5l5.5 5.5L20 6.5" />
+            </svg>
+            <span className="font-mono text-[12.5px] font-bold tracking-wide">СКАЧАНО!</span>
+          </>
+        ) : (
+          <>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
+              <path d="M12 3v12m0 0l-5-5m5 5l5-5" />
+              <path d="M4 19h16" />
+            </svg>
+            <span className="font-display text-[13px] font-bold tracking-wide">
+              zapret-vse.bat
+            </span>
+          </>
+        )}
+      </button>
 
       {/* ===== footer ===== */}
       <footer className="relative z-10 border-t border-ink-700/70 bg-ink-950/70">
