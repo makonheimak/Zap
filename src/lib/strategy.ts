@@ -389,12 +389,16 @@ export function buildUniversalLauncher(seed: number): string {
   p();
   p(":: --- ищем winws.exe: рядом, в bin\\, либо в папке zapret выше ---");
   p('set "WINWS="');
+  p('if exist "binaries\\windows-x86_64\\winws\\winws.exe" set "WINWS=binaries\\windows-x86_64\\winws\\winws.exe"');
+  p('if exist "binaries\\win64\\winws\\winws.exe" set "WINWS=binaries\\win64\\winws\\winws.exe"');
+  p('if exist "binaries\\win64\\winws.exe" set "WINWS=binaries\\win64\\winws.exe"');
   p('if exist "winws.exe" set "WINWS=winws.exe"');
   p('if exist "bin\\winws.exe" set "WINWS=bin\\winws.exe"');
   p('if exist "..\\bin\\winws.exe" ( cd .. & set "WINWS=bin\\winws.exe" )');
   p('if "%WINWS%"=="" (');
   p("  echo [X] ОШИБКА: winws.exe не найден!");
-  p("  echo     Распакуй zapret и положи этот файл в корень его папки");
+  p("  echo     Нужен движок: скачай github.com/bol-van/zapret/releases");
+  p("  echo     Распакуй архив и положи zapret-vse.bat в корень папки");
   p("  echo     ^(рядом с bin\\ и lists\\^), затем запусти заново.");
   p("  pause");
   p("  exit /b 1");
