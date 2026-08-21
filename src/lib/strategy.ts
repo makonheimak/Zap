@@ -1,5 +1,5 @@
 // ============================================================
-// Генератор личных стратегий и умного авто-лаунчера для winws
+// Генератор личных стратегий и умных авто-лаунчеров для winws
 // ============================================================
 
 export type DesyncMode =
@@ -114,7 +114,7 @@ export function buildBat(o: StrategyOptions, buildId: string): string {
   const lines: string[] = [
     "@echo off",
     "chcp 65001 >nul",
-    "cd /d \"%~dp0\"",
+    'cd /d "%~dp0"',
     "",
     ":: ========================================================",
     `::   СВОЙ ЗАПРЕТ — личная сборка ${buildId}`,
@@ -122,7 +122,7 @@ export function buildBat(o: StrategyOptions, buildId: string): string {
     "::   НИКОМУ не передавай этот файл: он сгорит, как публичный.",
     ":: ========================================================",
     "",
-    'echo [*] Запуск личной стратегии ' + buildId + " ...",
+    "echo [*] Запуск личной стратегии " + buildId + " ...",
     'echo [*] Если UAC спросит права — жми "Да".',
     "",
     'if not exist "bin\\winws.exe" (',
@@ -152,7 +152,7 @@ export function buildBat(o: StrategyOptions, buildId: string): string {
     "",
     "echo.",
     "echo [OK] Стратегия работает в фоне.",
-    'echo      Проверь youtube.com и Discord, затем закрой это окно.',
+    "echo      Проверь youtube.com и Discord, затем закрой это окно.",
     "pause",
   ];
   return BOM + lines.join("\r\n") + "\r\n";
@@ -239,7 +239,7 @@ export function buildSmartLauncher(o: AutoOptions): string {
   p(")");
   p();
   p("set /a TRY=0");
-  p("set \"MAX=" + o.maxAttempts + "\"");
+  p('set "MAX=' + o.maxAttempts + '"');
   p();
   p(":: --- сначала пробуем сохранённую рабочую сигнатуру ---");
   p('if exist "rabochaia.cfg" (');
@@ -278,27 +278,21 @@ export function buildSmartLauncher(o: AutoOptions): string {
   if (o.discord) {
     p("echo.");
     p("echo [i] Проверяю Discord...");
-    p(
-      'powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference=\'SilentlyContinue\'; try { (Invoke-WebRequest -Uri \'https://discord.com\' -UseBasicParsing -TimeoutSec 12) | Out-Null; exit 0 } catch { exit 1 }"'
-    );
+    p('powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference=\'SilentlyContinue\'; try { (Invoke-WebRequest -Uri \'https://discord.com\' -UseBasicParsing -TimeoutSec 12) | Out-Null; exit 0 } catch { exit 1 }"');
     p("if !ERRORLEVEL! equ 0 (");
     p("  echo     Discord: ОТКРЫВАЕТСЯ");
     p(") else (");
-    p(
-      "  echo     Discord: пока не открылся. Закрой клиент, удали %%appdata%%\\discord\\Cache и запусти снова."
-    );
+    p("  echo     Discord: пока не открылся. Закрой клиент, удали %appdata%\\discord\\Cache и запусти снова.");
     p(")");
   }
   if (o.telegram) {
     p("echo [i] Проверяю Telegram...");
-    p(
-      'powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference=\'SilentlyContinue\'; try { (Invoke-WebRequest -Uri \'https://telegram.org\' -UseBasicParsing -TimeoutSec 12) | Out-Null; exit 0 } catch { exit 1 }"'
-    );
-    p("if !ERRORLEVEL! equ 0 ( echo     Telegram: ОТКРЫВАЕТСЯ ) else ( echo     Telegram: не открылся )");
+    p('powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference=\'SilentlyContinue\'; try { (Invoke-WebRequest -Uri \'https://telegram.org\' -UseBasicParsing -TimeoutSec 12) | Out-Null; exit 0 } catch { exit 1 }"');
+    p('if !ERRORLEVEL! equ 0 ( echo     Telegram: ОТКРЫВАЕТСЯ ) else ( echo     Telegram: не открылся )');
   }
   if (o.autostart) {
     p();
-    p("schtasks /create /tn \"SvoiZapretAuto\" /tr \"\\\"%~f0\\\" /silent\" /sc onlogon /rl highest /f >nul 2>&1");
+    p('schtasks /create /tn "SvoiZapretAuto" /tr "\\"%~f0\\" /silent" /sc onlogon /rl highest /f >nul 2>&1');
     p("if !ERRORLEVEL! equ 0 (");
     p("  echo       [+] Автозапуск при входе в Windows включён ^(задача SvoiZapretAuto^)");
     p(")");
@@ -312,7 +306,7 @@ export function buildSmartLauncher(o: AutoOptions): string {
   p("echo  ================================================");
   p("echo   [X] !MAX! попыток не хватило.");
   p("echo   Что сделать:");
-  p("echo    1. service.bat -^> 2. Update ^(обновить списки^)");
+  p("echo    1. service.bat -> 2. Update ^(обновить списки^)");
   p("echo    2. Пройти чек-лист на сайте");
   p("echo    3. Запустить этот файл ещё раз");
   p("echo  ================================================");
@@ -324,7 +318,7 @@ export function buildSmartLauncher(o: AutoOptions): string {
   p('set "HEX=0123456789ABCDEF"');
   p('set "J1=0x"');
   p('set "J2=0x"');
-  p("for /L %%i in (1,1," + 10 + ") do (");
+  p("for /L %%i in (1,1,10) do (");
   p("  set /a A=!RANDOM! %% 16");
   p("  set /a B=!RANDOM! %% 16");
   p('  for %%a in (!A!) do set "J1=!J1!!HEX:~%%a,1!"');
@@ -342,12 +336,8 @@ export function buildSmartLauncher(o: AutoOptions): string {
   p('if !MF! equ 0 ( set "FOOL=--dpi-desync-fooling=badsum"     & set "FN=badsum" )');
   p('if !MF! equ 1 ( set "FOOL=--dpi-desync-fooling=md5sig"     & set "FN=md5sig" )');
   p('if !MF! equ 2 ( set "FOOL=--dpi-desync-fooling=datanoack"  & set "FN=datanoack" )');
-  p(
-    'if !MF! equ 3 ( set "FOOL=--dpi-desync-fooling=badseq --dpi-desync-badseq-increment=-!SI!" & set "FN=badseq" )'
-  );
-  p(
-    'set "CFG=--dpi-desync=!D! !SP! --dpi-desync-ttl=!TTL! !FOOL! --dpi-desync-fake-tls=!J1! --dpi-desync-fake-quic=!J2! --dpi-desync-repeats=2 --dpi-desync-wssize=1:65536 !HL!"'
-  );
+  p('if !MF! equ 3 ( set "FOOL=--dpi-desync-fooling=badseq --dpi-desync-badseq-increment=-!SI!" & set "FN=badseq" )');
+  p('set "CFG=--dpi-desync=!D! !SP! --dpi-desync-ttl=!TTL! !FOOL! --dpi-desync-fake-tls=!J1! --dpi-desync-fake-quic=!J2! --dpi-desync-repeats=2 --dpi-desync-wssize=1:65536 !HL!"');
   p("exit /b 0");
   p();
   p(":: ================= ЗАПУСК WINWS =================");
@@ -358,9 +348,139 @@ export function buildSmartLauncher(o: AutoOptions): string {
   p();
   p(":: ================= ТЕСТ СОЕДИНЕНИЯ =================");
   p(":test_yt");
-  p(
-    'powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference=\'SilentlyContinue\'; try { $r=Invoke-WebRequest -Uri \'https://www.youtube.com\' -UseBasicParsing -TimeoutSec 12; if ($r.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }"'
-  );
+  p('powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference=\'SilentlyContinue\'; try { $r=Invoke-WebRequest -Uri \'https://www.youtube.com\' -UseBasicParsing -TimeoutSec 12; if ($r.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }"');
+  p("exit /b %ERRORLEVEL%");
+
+  return BOM + L.join("\r\n") + "\r\n";
+}
+
+// ============================================================
+// УНИВЕРСАЛЬНЫЙ ЛАУНЧЕР «ОДНА КНОПКА — ВЕСЬ ИНТЕРНЕТ»
+// Фильтрует ВЕСЬ трафик (без списков доменов): ютуб, дискорд, тг
+// и вообще всё. Сам ищет winws.exe, сам повышает права,
+// сам подбирает сигнатуру, сам тестирует сеть, сам ставит автозапуск.
+// ============================================================
+
+export function buildUniversalLauncher(seed: number): string {
+  const buildId = "0x" + (seed >>> 0).toString(16).toUpperCase().padStart(8, "0");
+  const L: string[] = [];
+  const p = (s = "") => L.push(s);
+
+  p("@echo off");
+  p("chcp 65001 >nul");
+  p("setlocal EnableDelayedExpansion");
+  p("title СВОЙ ЗАПРЕТ — ВЕСЬ ИНТЕРНЕТ [" + buildId + "]");
+  p('cd /d "%~dp0"');
+  p();
+  p("echo.");
+  p("echo  =====================================================");
+  p("echo   СВОЙ ЗАПРЕТ // ВЕСЬ СВОБОДНЫЙ ИНТЕРНЕТ   " + buildId);
+  p("echo   одна кнопка: ютуб, дискорд, тг и ВСЁ остальное");
+  p("echo  =====================================================");
+  p("echo.");
+  p();
+  p(":: --- права администратора ---");
+  p("net session >nul 2>&1");
+  p("if %errorLevel% neq 0 (");
+  p("  echo [i] Нужны права администратора — перезапускаюсь...");
+  p('  powershell -NoProfile -Command "Start-Process -FilePath \'%~f0\' -Verb RunAs"');
+  p("  exit /b");
+  p(")");
+  p();
+  p(":: --- ищем winws.exe: рядом, в bin\\, либо в папке zapret выше ---");
+  p('set "WINWS="');
+  p('if exist "winws.exe" set "WINWS=winws.exe"');
+  p('if exist "bin\\winws.exe" set "WINWS=bin\\winws.exe"');
+  p('if exist "..\\bin\\winws.exe" ( cd .. & set "WINWS=bin\\winws.exe" )');
+  p('if "%WINWS%"=="" (');
+  p("  echo [X] ОШИБКА: winws.exe не найден!");
+  p("  echo     Распакуй zapret и положи этот файл в корень его папки");
+  p("  echo     ^(рядом с bin\\ и lists\\^), затем запусти заново.");
+  p("  pause");
+  p("  exit /b 1");
+  p(")");
+  p();
+  p("taskkill /f /im winws.exe >nul 2>&1");
+  p();
+  p(":: --- ВЕСЬ трафик: никаких списков доменов ---");
+  p("echo [i] Режим: фильтрую ВЕСЬ трафик, а не отдельные сайты.");
+  p();
+  p("set /a TRY=0");
+  p("set /a MAX=10");
+  p();
+  p(":next");
+  p("set /a TRY+=1");
+  p("if !TRY! gtr !MAX! goto :fail");
+  p("call :gen");
+  p("echo [i] Попытка !TRY!/!MAX! ^| !D! ^| ttl=!TTL! ^| fooling=!FN!");
+  p("call :run");
+  p("call :test_net");
+  p("if !ERRORLEVEL! equ 0 goto :ok");
+  p("taskkill /f /im winws.exe >nul 2>&1");
+  p("echo     ...БЛОК. Мутирую сигнатуру...");
+  p("goto :next");
+  p();
+  p(":ok");
+  p("echo.");
+  p("echo  =====================================================");
+  p("echo   [OK] ВЕСЬ ИНТЕРНЕТ ОТКРЫТ с попытки !TRY!");
+  p("echo   Ютуб, дискорд, тг и любые другие сайты — работают.");
+  p("echo   winws в фоне: окно не закрывай.");
+  p("echo  =====================================================");
+  p("echo.");
+  p('schtasks /create /tn "SvoiZapretAll" /tr "\\"%~f0\\" /silent" /sc onlogon /rl highest /f >nul 2>&1');
+  p("if !ERRORLEVEL! equ 0 echo [+] Автозапуск при входе в Windows включён.");
+  p("echo.");
+  p("pause");
+  p("exit /b 0");
+  p();
+  p(":fail");
+  p("echo.");
+  p("echo  =====================================================");
+  p("echo   [X] !MAX! попыток не хватило.");
+  p("echo   1. Добавь папку zapret в исключения антивируса.");
+  p("echo   2. service.bat -> 2. Update ^(обновить списки^).");
+  p("echo   3. Запусти этот файл ещё раз.");
+  p("echo  =====================================================");
+  p("pause");
+  p("exit /b 1");
+  p();
+  p(":: ============ ГЕНЕРАЦИЯ УНИКАЛЬНОЙ СИГНАТУРЫ ============");
+  p(":gen");
+  p('set "HEX=0123456789ABCDEF"');
+  p('set "J1=0x"');
+  p('set "J2=0x"');
+  p("for /L %%i in (1,1,10) do (");
+  p("  set /a A=!RANDOM! %% 16");
+  p("  set /a B=!RANDOM! %% 16");
+  p('  for %%a in (!A!) do set "J1=!J1!!HEX:~%%a,1!"');
+  p('  for %%b in (!B!) do set "J2=!J2!!HEX:~%%b,1!"');
+  p(")");
+  p("set /a TTL=2+!RANDOM! %% 12");
+  p("set /a POS=1+!RANDOM! %% 44");
+  p("set /a OV=1+!RANDOM! %% 9");
+  p("set /a SI=65536+!RANDOM!*2");
+  p("set /a MD=!RANDOM! %% 3");
+  p('if !MD! equ 0 ( set "D=fake,multisplit"   & set "SP=--dpi-desync-split-pos=!POS!" )');
+  p('if !MD! equ 1 ( set "D=fake,multidisorder" & set "SP=--dpi-desync-split-pos=!POS!" )');
+  p('if !MD! equ 2 ( set "D=fake,fake"          & set "SP=--dpi-desync-split-seqovl=!OV!" )');
+  p("set /a MF=!RANDOM! %% 4");
+  p('if !MF! equ 0 ( set "FOOL=--dpi-desync-fooling=badsum"     & set "FN=badsum" )');
+  p('if !MF! equ 1 ( set "FOOL=--dpi-desync-fooling=md5sig"     & set "FN=md5sig" )');
+  p('if !MF! equ 2 ( set "FOOL=--dpi-desync-fooling=datanoack"  & set "FN=datanoack" )');
+  p('if !MF! equ 3 ( set "FOOL=--dpi-desync-fooling=badseq --dpi-desync-badseq-increment=-!SI!" & set "FN=badseq" )');
+  p('set "CFG=--dpi-desync=!D! !SP! --dpi-desync-ttl=!TTL! !FOOL! --dpi-desync-fake-tls=!J1! --dpi-desync-fake-quic=!J2! --dpi-desync-repeats=2 --dpi-desync-wssize=1:65536"');
+  p("exit /b 0");
+  p();
+  p(":: ============ ЗАПУСК WINWS (ВЕСЬ ТРАФИК) ============");
+  p(":run");
+  p('start "" /min %WINWS% !CFG! --wf-l3=ipv4 --wf-tcp=443 --wf-udp=443,50000-65535');
+  p("timeout /t 3 /nobreak >nul");
+  p("exit /b 0");
+  p();
+  p(":: ============ ТЕСТ: ОТКРЫЛСЯ ЛИ ИНТЕРНЕТ ============");
+  p(":test_net");
+  p('powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference=\'SilentlyContinue\'; try { $r=Invoke-WebRequest -Uri \'https://www.youtube.com\' -UseBasicParsing -TimeoutSec 12; if ($r.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }"');
   p("exit /b %ERRORLEVEL%");
 
   return BOM + L.join("\r\n") + "\r\n";
