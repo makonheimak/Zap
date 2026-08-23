@@ -12,8 +12,8 @@ const PROTOCOLS = [
 
 export default function PingLab() {
   const [base, setBase] = useState(30); // твой пинг до сайта без всего
-  const [rtt, setRtt] = useState(180); // пинг до VPN-сервера
-  const [proto, setProto] = useState("obfs");
+  const [rtt, setRtt] = useState(220); // пинг до VPN-сервера (NL платный ≈ 220)
+  const [proto, setProto] = useState("vless");
 
   const ov = PROTOCOLS.find((p) => p.id === proto)?.ov ?? 45;
   const vpnPing = base + rtt + ov;
@@ -66,7 +66,7 @@ export default function PingLab() {
           />
           <div className="mb-5 mt-1 flex justify-between font-mono text-[9.5px] text-mist-500">
             <span>20</span>
-            <span>у тебя сейчас ≈ 400–500</span>
+            <span>NL в идеале 45–60, у тебя 500+</span>
             <span>500</span>
           </div>
 
@@ -86,6 +86,17 @@ export default function PingLab() {
               </button>
             ))}
           </div>
+
+          <button
+            onClick={() => {
+              setBase(30);
+              setRtt(220);
+              setProto("vless");
+            }}
+            className="mt-5 w-full rounded-[4px] border border-live-500/40 bg-live-500/[0.07] px-3 py-2.5 text-left font-mono text-[11px] leading-relaxed text-live-400 transition-all hover:-translate-y-0.5 hover:bg-live-500/15"
+          >
+            → подставить мой случай: платный ключ, сервер Нидерланды
+          </button>
         </div>
       </Reveal>
 
@@ -142,10 +153,39 @@ export default function PingLab() {
             </span>
           </div>
 
+          <div className="mt-4 rounded-[4px] border border-signal-500/35 bg-signal-500/[0.06] p-4">
+            <p className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-signal-400">
+              платный ключ + Нидерланды, а пинг всё равно 500+?
+            </p>
+            <ul className="space-y-2 font-mono text-[11px] leading-relaxed text-mist-300">
+              <li>
+                <b className="text-paper">Дистанция тут ни при чём:</b> Москва–Амстердам ≈{" "}
+                <span className="text-live-400">45–60 мс</span> физически. 500+ — это не километры.
+              </li>
+              <li>
+                <b className="text-paper">Протокол подписки:</b> в приложении hiddify открой настройки профиля и
+                попробуй другой транспорт — <span className="text-signal-400">Hysteria2 / VLESS-Vision / WireGuard</span>{" "}
+                вместо TCP-обфускации. Это главная причина.
+              </li>
+              <li>
+                <b className="text-paper">Перепродажа:</b> популярные подписки забивают один сервер десятками людей —
+                очередь на канал. Проверь пинг в разное время суток.
+              </li>
+              <li>
+                <b className="text-paper">Транзитный маршрут:</b> трафик может идти в Амстердам через перегруженный
+                стык. <code className="text-mist-400">tracert amsterdam</code> покажет, где затор.
+              </li>
+              <li>
+                <b className="text-live-400">Главное:</b> даже идеальный платный NL-сервер = +50 мс минимум. zapret =
+                +0 мс всегда. Для скорости — zapret, VPN — запасной.
+              </li>
+            </ul>
+          </div>
+
           <ul className="mt-4 space-y-1.5 font-mono text-[11px] leading-relaxed text-mist-400">
             <li><span className="text-signal-400">→</span> для игр/звонков/видео — zapret: задержка не добавляется вообще</li>
-            <li><span className="text-signal-400">→</span> hiddify держи как запасной на случай, если zapret умрёт</li>
-            <li><span className="text-signal-400">→</span> в hiddify выбери WireGuard/Hysteria2 и сервер поближе (Стамбул/Хельсинки) — с 500+ упадёт до ~150</li>
+            <li><span className="text-signal-400">→</span> платный hiddify держи как запасной — когда zapretу дадут новую сигнатуру</li>
+            <li><span className="text-signal-400">→</span> проверь пинг до сервера: <code className="text-mist-300">ping amsterdam.твой-сервер</code> — если там 400+, виноват провайдер ключа</li>
           </ul>
         </div>
       </Reveal>
