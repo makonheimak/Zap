@@ -55,6 +55,63 @@ const STEPS = [
   },
 ];
 
+const DUMPS = [
+  {
+    n: "01",
+    title: "Полная опись файлов",
+    cmds: ['cd /d "C:\\Users\\Максим\\Documents\\zapret-discord-youtube-1.9.9c"', "dir /s /b"],
+    hint: "Вижу всю структуру: где у тебя bin\\, lists\\, какие .bat лежат и как называются пресеты.",
+  },
+  {
+    n: "02",
+    title: "Главные файлы — целиком",
+    cmds: ["type service.bat", "type general.bat"],
+    hint: "Самое важное: здесь точные команды запуска winws в твоей сборке. Нет general.bat — сделай dir *.bat и пришли то, что есть (alt*.bat, youtube.bat…).",
+  },
+  {
+    n: "03",
+    title: "Списки — только опись",
+    cmds: ["dir lists"],
+    hint: "Только имена и размеры. Сам rkn-domains.txt целиком НЕ сливай — там десятки тысяч строк, мне достаточно знать, что он есть.",
+  },
+];
+
+function DumpCard({ n, title, hint, cmds }: { n: string; title: string; hint: string; cmds: string[] }) {
+  const [copied, setCopied] = useState<number | null>(null);
+  const copy = (i: number, text: string) => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(i);
+    setTimeout(() => setCopied(null), 1500);
+  };
+  return (
+    <div className="group flex flex-col rounded-md border border-ink-600 bg-ink-850/80 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal-500/50 hover:bg-ink-800">
+      <div className="mb-3 flex items-center gap-3">
+        <span className="rounded-[4px] border border-signal-500/50 px-2 py-1 font-mono text-[12px] font-bold text-signal-400">{n}</span>
+        <h3 className="font-display text-[15px] font-bold tracking-tight text-paper">{title}</h3>
+      </div>
+      <div className="space-y-2">
+        {cmds.map((c, i) => (
+          <div key={i} className="flex items-start gap-2 rounded-[4px] border border-ink-700 bg-ink-950/70 px-3 py-2">
+            <span className="mt-px font-mono text-[12px] text-signal-500">›</span>
+            <code className="flex-1 break-all font-mono text-[11.5px] leading-relaxed text-mist-300">{c}</code>
+            <button
+              onClick={() => copy(i, c)}
+              className={`shrink-0 rounded-[3px] border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
+                copied === i
+                  ? "border-live-500/60 bg-live-500/10 text-live-400"
+                  : "border-ink-600 bg-ink-800 text-mist-400 hover:border-signal-500/60 hover:text-signal-400"
+              }`}
+            >
+              {copied === i ? "✓ скопир." : "copy"}
+            </button>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[12px] leading-relaxed text-mist-500">{hint}</p>
+    </div>
+  );
+}
+
 export default function App() {
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 0xffffffff));
   const [fired, setFired] = useState(false);
@@ -285,6 +342,35 @@ export default function App() {
           </div>
         </Reveal>
         <Console />
+      </section>
+
+      {/* ===== dump structure for analysis ===== */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
+        <Reveal>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="font-display text-[clamp(20px,2.6vw,30px)] font-bold tracking-tight text-paper">
+              Дамп файлов: соберу <span className="text-signal-500">под твою сборку</span>
+            </h2>
+            <span className="font-mono text-[11px] text-mist-500">3 команды → вывод в чат</span>
+          </div>
+        </Reveal>
+        <div className="grid gap-4 md:grid-cols-3">
+          {DUMPS.map((d, i) => (
+            <Reveal key={d.n} delay={i * 80}>
+              <DumpCard {...d} />
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={160}>
+          <div className="mt-4 flex items-start gap-3 rounded-md border border-live-500/35 bg-live-500/[0.06] px-5 py-4">
+            <span className="anim-pulse-dot mt-1.5 h-2 w-2 shrink-0 rounded-full bg-live-500" />
+            <p className="text-[13px] leading-relaxed text-mist-300">
+              Скинь вывод всех трёх команд <b className="text-paper">одним сообщением в чат</b>. Я разберу точный
+              синтаксис флагов твоей версии winws, пути и списки — и сгенерирую личный лаунчер{" "}
+              <b className="text-live-400">один в один под твою папку</b>, включая автообновление списков.
+            </p>
+          </div>
+        </Reveal>
       </section>
 
       {/* ===== live inspector ===== */}
