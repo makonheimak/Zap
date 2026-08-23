@@ -1,313 +1,237 @@
 // ============================================================
-// Разбор чужой стратегии (general.bat и т.п.) и генерация
-// личной версии на её основе
+// Разбор реальной multi-block стратегии zapret (формат 1.10.x)
+// и генерация личной версии: general (SVOI 0x...).bat
 // ============================================================
 
-export type FlagKind = "hex" | "num" | "range" | "path" | "text" | "none";
-export type FlagForm = "eq" | "space" | "bare" | "pos";
+const QUIC_BINS = [
+  "quic_initial_4pda_to.bin",
+  "quic_initial_5ka_ru.bin",
+  "quic_initial_dbankcloud_ru.bin",
+  "quic_initial_rutube_ru.bin",
+  "quic_initial_steamcommunity_com.bin",
+  "quic_initial_tencent_com.bin",
+  "quic_initial_www_google_com.bin",
+];
+const TLS_BINS = [
+  "tls_clienthello_4pda_to.bin",
+  "tls_clienthello_5ka_ru.bin",
+  "tls_clienthello_max_ru.bin",
+  "tls_clienthello_www_google_com.bin",
+];
+const STUN_BINS = ["stun.bin", "stun2.bin"];
 
-export interface ParsedFlag {
+const NUMERIC_MUTABLE = new Set([
+  "--dpi-desync-repeats",
+  "--dpi-desync-split-seqovl",
+  "--dpi-desync-split-pos",
+]);
+
+const BIN_POOLS: Record<string, string[]> = {
+  "--dpi-desync-fake-quic": QUIC_BINS,
+  "--dpi-desync-split-seqovl-pattern": TLS_BINS,
+  "--dpi-desync-fake-stun": STUN_BINS,
+};
+
+export interface StratFlag {
   name: string;
-  value: string;
-  kind: FlagKind;
-  form: FlagForm;
-  mutable: boolean;
+  value: string; // как в файле, с кавычками и %VAR%
+  form: "eq" | "space" | "alone";
+  mutable: boolean; // числовой параметр — рандомизируется
+  swappable: boolean; // фейк-.bin — подменяется из пула
+  pool?: string[];
   hint: string;
+}
+
+export interface StratBlock {
+  flags: StratFlag[];
 }
 
 export interface ParseResult {
   ok: boolean;
-  error: string;
-  flags: ParsedFlag[];
+  error?: string;
+  global: StratFlag[];
+  blocks: StratBlock[];
 }
 
-const BOM = "\uFEFF";
-const HEXC = "0123456789ABCDEF";
-
-function tokenize(s: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let q = false;
-  for (const ch of s) {
-    if (ch === '"') {
-      q = !q;
-      cur += ch;
-      continue;
-    }
-    if (/\s/.test(ch) && !q) {
-      if (cur) {
-        out.push(cur);
-        cur = "";
-      }
-      continue;
-    }
-    cur += ch;
-  }
-  if (cur) out.push(cur);
-  return out;
+export interface RandomOpts {
+  nums: boolean;
+  bins: boolean;
 }
 
-function classify(raw: string): FlagKind {
-  const s = raw.replace(/^"|"$/g, "");
-  if (s === "") return "none";
-  if (/^0x[0-9a-fA-F]+$/i.test(s)) return "hex";
-  if (/^-?\d+$/.test(s)) return "num";
-  if (/^\d+:\d+$/.test(s)) return "range";
-  if (/[\\/]/.test(s)) return "path";
-  return "text";
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+function classify(name: string, value: string): StratFlag {
+  const mutable = NUMERIC_MUTABLE.has(name);
+  const pool = BIN_POOLS[name];
+  const swappable = !!pool && /%BIN%/.test(value);
+  const hint = swappable
+    ? "фейк-пакет: можно подменить на другой .bin из твоей папки bin"
+    : mutable
+      ? "числовой параметр: персонализируется"
+      : "фиксированный параметр (фильтр/список/режим)";
+  return { name, value, form: "eq", mutable, swappable, pool, hint };
 }
 
-/** Какие числовые параметры безопасно перемешивать (порты не трогаем!). */
-function numRange(name: string): [number, number] | null {
-  const n = name.toLowerCase();
-  if (n.includes("ttl")) return [2, 14];
-  if (n.includes("split-pos") || n.endsWith("-pos")) return [1, 60];
-  if (n.includes("seqovl") || n.includes("ovl")) return [1, 10];
-  if (n.includes("repeats")) return [2, 6];
-  if (n.includes("increment") || n.includes("badseq")) return [-999999, -100000];
-  if (n.includes("tls-mod") || n.endsWith("-mod")) return [0, 8];
-  return null;
-}
-
-function hintFor(kind: FlagKind, mutable: boolean): string {
-  if (kind === "hex") return "фейк-мусор — перемешивается";
-  if (mutable) return "числовой параметр — перемешивается";
-  if (kind === "path") return "путь к файлу — не трогаю";
-  if (kind === "text") return "режим/методы — не трогаю";
-  if (kind === "range") return "диапазон — не трогаю";
-  if (kind === "num") return "число (порт и т.п.) — не трогаю";
-  return "";
-}
-
-function makeFlag(name: string, value: string, form: FlagForm): ParsedFlag {
-  const kind = classify(value);
-  const mutable = kind === "hex" || (kind === "num" && numRange(name) !== null);
-  return { name, value, kind, form, mutable, hint: hintFor(kind, mutable) };
-}
-
-export function parseBat(text: string): ParseResult {
-  // склеиваем переносы строк через ^
-  const joined = text.replace(/\^\s*\r?\n/g, " ");
-  const lines = joined.split(/\r?\n/);
-  let target = "";
-
-  for (const ln of lines) {
-    const low = ln.toLowerCase();
-    const idx = low.indexOf("winws.exe");
-    if (idx === -1) continue;
-    // пропускаем строки вида tasklist /FI "IMAGENAME eq winws.exe"
-    if (low.includes("imagename") || low.includes("tasklist") || low.includes("taskkill")) continue;
-    target = ln.slice(idx + "winws.exe".length);
-    target = target.replace(/^["\s]+/, "");
-    // обрезаем редиректы и пайпы
-    target = target.replace(/\s*(?:&&|\|\||\||1?>|2>).*$/, "");
-    target = target.trim();
-    break;
-  }
-
-  if (!target) {
+export function parseBat(input: string): ParseResult {
+  const m = input.match(/winws\.exe"?\s+([\s\S]+)/i);
+  if (!m) {
     return {
       ok: false,
-      error: "строка с winws.exe не найдена — вставь файл стратегии целиком (type \"general.bat\")",
-      flags: [],
+      error: "Не нашёл строку запуска winws.exe. Вставь весь general.bat (или хотя бы строку с флагами после winws.exe).",
+      global: [],
+      blocks: [],
     };
   }
 
-  const tokens = tokenize(target);
-  const flags: ParsedFlag[] = [];
+  let raw = m[1];
+  // склейка переносов строк через ^
+  raw = raw.replace(/\^\s*\r?\n/g, " ");
+  // склейка флагов, разорванных переносом консоли: "--dpi- desync=..." -> "--dpi-desync=..."
+  raw = raw.replace(/(\S-)\s+(\S+=)/g, "$1$2");
+
+  // токены с учётом кавычек
+  const tokens: string[] = [];
+  const re = /"([^"]*)"|(\S+)/g;
+  let t: RegExpExecArray | null;
+  while ((t = re.exec(raw))) {
+    tokens.push(t[1] !== undefined ? `"${t[1]}"` : t[2]);
+  }
+
+  const groups: StratFlag[][] = [[]];
   for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t.startsWith("--")) {
-      const eq = t.indexOf("=");
-      if (eq !== -1) {
-        flags.push(makeFlag(t.slice(0, eq), t.slice(eq + 1), "eq"));
-      } else {
-        const nxt = tokens[i + 1];
-        if (nxt !== undefined && !nxt.startsWith("--")) {
-          flags.push(makeFlag(t, nxt, "space"));
-          i++;
-        } else {
-          flags.push(makeFlag(t, "", "bare"));
-        }
-      }
+    const tok = tokens[i];
+    if (tok === "--new") {
+      groups.push([]);
+      continue;
+    }
+    if (!tok.startsWith("--")) continue; // мусор (например, строка приглашения cmd)
+    const eq = tok.indexOf("=");
+    if (eq > 0) {
+      groups[groups.length - 1].push(classify(tok.slice(0, eq), tok.slice(eq + 1)));
     } else {
-      flags.push({
-        name: "(позиционный)",
-        value: t,
-        kind: classify(t),
-        form: "pos",
-        mutable: false,
-        hint: "",
-      });
+      const nxt = tokens[i + 1];
+      if (nxt && !nxt.startsWith("--")) {
+        groups[groups.length - 1].push({ ...classify(tok, nxt), form: "space" });
+        i++;
+      } else {
+        groups[groups.length - 1].push({ ...classify(tok, ""), form: "alone" });
+      }
     }
   }
 
-  if (flags.length === 0) {
-    return { ok: false, error: "winws.exe нашёлся, но флагов после него нет", flags: [] };
+  const nonEmpty = groups.filter((g) => g.length > 0);
+  if (nonEmpty.length === 0) {
+    return { ok: false, error: "Строка winws.exe найдена, но флаги не распозналиcь. Проверь, что скопировалась вся команда.", global: [], blocks: [] };
   }
-  return { ok: true, error: "", flags };
+
+  if (nonEmpty.length === 1) {
+    return { ok: true, global: [], blocks: [{ flags: nonEmpty[0] }] };
+  }
+  return {
+    ok: true,
+    global: nonEmpty[0],
+    blocks: nonEmpty.slice(1).map((flags) => ({ flags })),
+  };
 }
 
-export function randomizeFlags(flags: ParsedFlag[], rand: () => number): ParsedFlag[] {
-  return flags.map((f) => {
-    if (!f.mutable) return f;
-    const plain = f.value.replace(/^"|"$/g, "");
-    if (f.kind === "hex") {
-      const len = Math.max(plain.length - 2, 8);
-      let v = "0x";
-      for (let i = 0; i < len; i++) v += HEXC[Math.floor(rand() * 16)];
-      return { ...f, value: v };
+export function displayValue(f: StratFlag): string {
+  return f.value.replace(/^"|"$/g, "").replace(/^%BIN%/, "bin\\").replace(/^%LISTS%/, "lists\\");
+}
+
+export function serializeFlag(f: StratFlag): string {
+  if (f.form === "alone") return f.name;
+  if (f.form === "space") return `${f.name} ${f.value}`;
+  return `${f.name}=${f.value}`;
+}
+
+export function randomizeStrategy(
+  global: StratFlag[],
+  blocks: StratBlock[],
+  rand: () => number,
+  opts: RandomOpts
+): { global: StratFlag[]; blocks: StratBlock[] } {
+  const map = (f: StratFlag): StratFlag => {
+    if (f.mutable && opts.nums && /^\d+$/.test(f.value)) {
+      const base = parseInt(f.value, 10);
+      let v = base;
+      if (f.name === "--dpi-desync-repeats") v = clamp(Math.round(base * (0.6 + rand() * 0.9)), 2, 16);
+      if (f.name === "--dpi-desync-split-seqovl") v = clamp(Math.round(base * (0.55 + rand() * 0.9)), 64, 1400);
+      if (f.name === "--dpi-desync-split-pos") v = 1 + Math.floor(rand() * 3);
+      return { ...f, value: String(v) };
     }
-    const r = numRange(f.name);
-    if (r) {
-      const n = r[0] + Math.floor(rand() * (r[1] - r[0] + 1));
-      return { ...f, value: String(n) };
+    if (f.swappable && opts.bins && f.pool) {
+      const pick = f.pool[Math.floor(rand() * f.pool.length)];
+      return { ...f, value: `"%BIN%${pick}"` };
     }
     return f;
-  });
+  };
+  return {
+    global: global.map(map),
+    blocks: blocks.map((b) => ({ flags: b.flags.map(map) })),
+  };
 }
 
-export function toArgsLine(flags: ParsedFlag[]): string {
-  return flags
-    .map((f) => {
-      if (f.form === "pos") return f.value;
-      if (f.form === "bare") return f.name;
-      if (f.form === "space") return `${f.name} ${f.value}`;
-      return `${f.name}=${f.value}`;
-    })
-    .join(" ");
+export function toCommand(global: StratFlag[], blocks: StratBlock[]): string {
+  const parts: string[] = [];
+  if (global.length) parts.push(global.map(serializeFlag).join(" "));
+  for (const b of blocks) parts.push(b.flags.map(serializeFlag).join(" "));
+  return parts.join(" --new ");
 }
 
-/** Для службы: относительные пути делаем абсолютными (%~dp0) и экранируем кавычки под sc. */
-function serviceArgs(flags: ParsedFlag[]): string {
-  return flags
-    .map((f) => {
-      if (f.form === "pos") return f.value;
-      if (f.form === "bare") return f.name;
-      let v = f.value;
-      if (f.kind === "path") {
-        const stripped = v.replace(/^"|"$/g, "");
-        const hadQuotes = v.startsWith('"');
-        const abs = /^[a-zA-Z]:\\/.test(stripped) || stripped.startsWith("%") ? stripped : "%~dp0" + stripped;
-        v = hadQuotes ? `"${abs}"` : abs;
-      }
-      return f.form === "space" ? `${f.name} ${v}` : `${f.name}=${v}`;
-    })
-    .join(" ")
-    .replace(/"/g, '\\"');
+export function blockLabel(flags: StratFlag[]): string {
+  const val = (n: string) => flags.find((f) => f.name === n)?.value ?? "";
+  const l7 = val("--filter-l7");
+  const dom = val("--hostlist-domains");
+  const hl = val("--hostlist");
+  const ftcp = val("--filter-tcp");
+  const fudp = val("--filter-udp");
+  const ipset = val("--ipset");
+  if (l7.includes("discord")) return "Discord UDP + STUN";
+  if (dom.includes("discord")) return "Discord TCP (альт. порты)";
+  if (hl.includes("list-google")) return "YouTube / Google";
+  if (fudp.includes("%GameFilter")) return "Игры (UDP)";
+  if (ftcp.includes("%GameFilter")) return "Игры (TCP)";
+  if (fudp === "443" && ipset) return "QUIC по ipset";
+  if (fudp === "443") return "QUIC общий (hostlist)";
+  if (ipset) return "TCP по ipset";
+  return "TCP общий (hostlist)";
 }
 
-export function buildPersonalWindowBat(flags: ParsedFlag[], seedHex: string): string {
-  const args = toArgsLine(flags);
-  const L: string[] = [
-    "@echo off",
-    "@echo off",
-    "chcp 65001 >nul",
-    "setlocal EnableDelayedExpansion",
-    "title СВОЙ ЗАПРЕТ — личная стратегия [" + seedHex + "]",
-    'cd /d "%~dp0"',
-    "",
-    "echo.",
-    "echo  =====================================================",
-    "echo   СВОЙ ЗАПРЕТ // личная стратегия   " + seedHex,
-    "echo   собрана на базе твоего general.bat, сигнатура своя",
-    "echo  =====================================================",
-    "echo.",
-    "",
-    "net session >nul 2>&1",
-    "if %errorLevel% neq 0 (",
-    "  echo [i] Нужны права администратора — перезапускаюсь...",
-    "  powershell -NoProfile -Command \"Start-Process -FilePath '%~f0' -Verb RunAs\"",
-    "  exit /b",
-    ")",
-    "",
-    'if not exist "bin\\winws.exe" (',
-    "  echo [X] bin\\winws.exe не найден.",
-    "  echo     Положи этот файл в корень папки zapret и запусти заново.",
-    "  pause",
-    "  exit /b 1",
-    ")",
-    "",
-    "sc query zapret >nul 2>&1 && (",
-    "  echo [i] Останавливаю службу zapret, чтобы не было двух winws...",
-    "  net stop zapret >nul 2>&1",
-    ")",
-    "taskkill /f /im winws.exe >nul 2>&1",
-    "",
-    "echo [i] Запускаю личную стратегию " + seedHex + " ...",
-    'start "" /min bin\\winws.exe ' + args,
-    "timeout /t 3 /nobreak >nul",
-    'tasklist /fi "imagename eq winws.exe" | find /i "winws.exe" >nul',
-    "if errorlevel 1 (",
-    "  echo [X] winws не запустился.",
-    "  echo     Скорее всего антивирус: добавь папку zapret в исключения.",
-    "  pause",
-    "  exit /b 1",
-    ")",
-    "",
-    "echo.",
-    "echo  =====================================================",
-    "echo   [OK] Личная стратегия работает в фоне.",
-    "echo   Окно можно закрыть — winws останется.",
-    "echo   Сигнатура " + seedHex + ": никому не передавай этот файл.",
-    "echo  =====================================================",
-    "echo.",
-    "pause",
-  ];
+const BOM = "\uFEFF";
+
+/** Личная стратегия в нативном формате — встаёт в меню service.bat (Install Service) и работает по двойному клику. */
+export function buildStrategyBat(global: StratFlag[], blocks: StratBlock[], seedHex: string): string {
+  const L: string[] = [];
+  const p = (s = "") => L.push(s);
+  p("@echo off");
+  p("@echo off");
+  p("chcp 65001 > nul");
+  p(":: 65001 - UTF-8");
+  p(`:: ============================================================`);
+  p(`::   СВОЙ ЗАПРЕТ — личная стратегия ${seedHex}`);
+  p(`::   Сделана из твоего general.bat: структура сохранена,`);
+  p(`::   числовые параметры и фейк-.bin файлы персонализированы.`);
+  p(`::   НИКОМУ не передавай этот файл: он сгорит, как публичный.`);
+  p(`:: ============================================================`);
+  p();
+  p('cd /d "%~dp0"');
+  p("call service.bat status_zapret");
+  p("call service.bat check_updates");
+  p("call service.bat load_game_filter");
+  p("call service.bat load_user_lists");
+  p("echo:");
+  p();
+  p('set "BIN=%~dp0bin\\"');
+  p('set "LISTS=%~dp0lists\\"');
+  p("cd /d %BIN%");
+  p();
+  const lines: string[] = [];
+  if (global.length) lines.push(global.map(serializeFlag).join(" "));
+  for (const b of blocks) lines.push(b.flags.map(serializeFlag).join(" "));
+  p('start "zapret: %~n0" /min "%BIN%winws.exe" ' + lines.join(" --new ^\n") );
   return BOM + L.join("\r\n") + "\r\n";
 }
 
-export function buildPersonalServiceBat(flags: ParsedFlag[], seedHex: string): string {
-  const args = serviceArgs(flags);
-  const L: string[] = [
-    "@echo off",
-    "@echo off",
-    "chcp 65001 >nul",
-    "setlocal EnableDelayedExpansion",
-    "title СВОЙ ЗАПРЕТ — служба [" + seedHex + "]",
-    'cd /d "%~dp0"',
-    "",
-    "echo.",
-    "echo  =====================================================",
-    "echo   СВОЙ ЗАПРЕТ // личная стратегия как служба   " + seedHex,
-    "echo   переживёт перезагрузку, окна не будет",
-    "echo  =====================================================",
-    "echo.",
-    "",
-    "net session >nul 2>&1",
-    "if %errorLevel% neq 0 (",
-    "  echo [i] Нужны права администратора — перезапускаюсь...",
-    "  powershell -NoProfile -Command \"Start-Process -FilePath '%~f0' -Verb RunAs\"",
-    "  exit /b",
-    ")",
-    "",
-    'if not exist "bin\\winws.exe" (',
-    "  echo [X] bin\\winws.exe не найден. Положи файл в корень папки zapret.",
-    "  pause",
-    "  exit /b 1",
-    ")",
-    "",
-    "taskkill /f /im winws.exe >nul 2>&1",
-    "sc query zapret >nul 2>&1 && ( net stop zapret >nul 2>&1 & sc delete zapret >nul 2>&1 )",
-    'netsh interface tcp show global | findstr /i "timestamps" | findstr /i "enabled" >nul || netsh interface tcp set global timestamps=enabled >nul 2>&1',
-    "",
-    'set "ARGS=' + args + '"',
-    "echo [i] Создаю службу zapret...",
-    'sc create zapret binPath= "\\"%~dp0bin\\winws.exe\\" !ARGS!" DisplayName= "zapret" start= auto',
-    'sc description zapret "Zapret DPI bypass — личная сборка ' + seedHex + '"',
-    "sc start zapret",
-    'reg add "HKLM\\System\\CurrentControlSet\\Services\\zapret" /v zapret-discord-youtube /t REG_SZ /d "svoi-' +
-      seedHex +
-      '" /f >nul',
-    "",
-    "echo.",
-    "echo  =====================================================",
-    "echo   [OK] Служба zapret установлена и запущена.",
-    "echo   Переживёт перезагрузку — поднимется сама.",
-    "echo   Удаление: service.bat -> 2. Remove Services.",
-    "echo  =====================================================",
-    "echo.",
-    "pause",
-  ];
-  return BOM + L.join("\r\n") + "\r\n";
+export function strategyFileName(seedHex: string): string {
+  return `general (SVOI ${seedHex}).bat`;
 }

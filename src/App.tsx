@@ -332,6 +332,21 @@ export default function App() {
         </div>
       </section>
 
+      {/* ===== strategy lab ===== */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
+        <Reveal>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="font-display text-[clamp(20px,2.6vw,30px)] font-bold tracking-tight text-paper">
+              Разбор <span className="text-signal-400">твоей стратегии</span>
+            </h2>
+            <span className="font-mono text-[11px] text-mist-500">
+              multi-block 1.10.x → личный general (SVOI).bat
+            </span>
+          </div>
+        </Reveal>
+        <StrategyLab />
+      </section>
+
       {/* ===== console launch ===== */}
       <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
         <Reveal>
