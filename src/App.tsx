@@ -3,6 +3,7 @@ import PacketField from "./components/PacketField";
 import Inspector from "./components/Inspector";
 import Reveal from "./components/Reveal";
 import Console from "./components/Console";
+import StrategyLab from "./components/StrategyLab";
 import {
   buildSmartLauncher,
   buildUniversalLauncher,
