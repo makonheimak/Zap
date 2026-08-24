@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import PacketField from "./components/PacketField";
 import Inspector from "./components/Inspector";
 import Reveal from "./components/Reveal";
+import Console from "./components/Console";
+import StrategyLab from "./components/StrategyLab";
+import PingLab from "./components/PingLab";
+import { buildInstaller } from "./lib/installer";
 import {
   buildSmartLauncher,
   buildUniversalLauncher,
@@ -30,34 +34,86 @@ function buildHex(seed: number) {
 const STEPS = [
   {
     n: "01",
-    t: "Скачай движок zapret",
-    d: "Распакуй архив zapret: в папке должны быть bin\\winws.exe и lists\\. GitHub Flowseal отдаёт 404 — бери зеркала из свежих гайдов или оригинальный bol-van/zapret.",
+    t: "Скачай установщик",
+    d: "Одна кнопка — один файл zapret-ustanovshik.bat. В нём уже запечена твоя личная стратегия: 9 блоков как в 1.10.1, но со своими числами и своими фейк-файлами.",
     c: "text-signal-400 border-signal-500/50",
   },
   {
     n: "02",
-    t: "Положи zapret-vse.bat в корень",
-    d: "Скопируй скачанный файл в корень папки zapret — туда, где лежат bin\\ и lists\\. Это единственный файл, который тебе понадобится.",
+    t: "Запусти и выбери папку zapret",
+    d: "Двойной клик → «Да» на права → откроется обычное окно выбора папки. Укажи свою zapret-discord-youtube-1.10.1. Ничего никуда перетаскивать не надо.",
     c: "text-live-400 border-live-500/50",
   },
   {
     n: "03",
-    t: "Двойной клик → «Да»",
-    d: "Запусти файл. Он сам попросит права администратора — жми «Да». Дальше всё происходит без тебя: подбор сигнатуры, тест сети, автозапуск.",
+    t: "Готово — и навсегда",
+    d: "Установщик сам создаст general (SVOI …).bat внутри твоей папки, запустит winws и поставит автозапуск. После перезагрузки всё поднимется само. Перестало работать — скачал новый установщик, запустил, выбрал папку.",
     c: "text-danger-400 border-danger-500/50",
   },
+];
+
+const DUMPS = [
   {
-    n: "04",
-    t: "Весь интернет открыт",
-    d: "Ютуб, дискорд, тг и любые другие сайты работают, как будто блокировок нет. Окно не закрывай — winws в фоне. После перезагрузки поднимется сам.",
-    c: "text-signal-400 border-signal-500/50",
+    n: "01",
+    title: "Полная опись файлов",
+    cmds: ['cd /d "C:\\Users\\Максим\\Documents\\zapret-discord-youtube-1.9.9c"', "dir /s /b"],
+    hint: "Вижу всю структуру: где у тебя bin\\, lists\\, какие .bat лежат и как называются пресеты.",
+  },
+  {
+    n: "02",
+    title: "Главные файлы — целиком",
+    cmds: ["type service.bat", "type general.bat"],
+    hint: "Самое важное: здесь точные команды запуска winws в твоей сборке. Нет general.bat — сделай dir *.bat и пришли то, что есть (alt*.bat, youtube.bat…).",
+  },
+  {
+    n: "03",
+    title: "Списки — только опись",
+    cmds: ["dir lists"],
+    hint: "Только имена и размеры. Сам rkn-domains.txt целиком НЕ сливай — там десятки тысяч строк, мне достаточно знать, что он есть.",
   },
 ];
+
+function DumpCard({ n, title, hint, cmds }: { n: string; title: string; hint: string; cmds: string[] }) {
+  const [copied, setCopied] = useState<number | null>(null);
+  const copy = (i: number, text: string) => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(i);
+    setTimeout(() => setCopied(null), 1500);
+  };
+  return (
+    <div className="group flex flex-col rounded-md border border-ink-600 bg-ink-850/80 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal-500/50 hover:bg-ink-800">
+      <div className="mb-3 flex items-center gap-3">
+        <span className="rounded-[4px] border border-signal-500/50 px-2 py-1 font-mono text-[12px] font-bold text-signal-400">{n}</span>
+        <h3 className="font-display text-[15px] font-bold tracking-tight text-paper">{title}</h3>
+      </div>
+      <div className="space-y-2">
+        {cmds.map((c, i) => (
+          <div key={i} className="flex items-start gap-2 rounded-[4px] border border-ink-700 bg-ink-950/70 px-3 py-2">
+            <span className="mt-px font-mono text-[12px] text-signal-500">›</span>
+            <code className="flex-1 break-all font-mono text-[11.5px] leading-relaxed text-mist-300">{c}</code>
+            <button
+              onClick={() => copy(i, c)}
+              className={`shrink-0 rounded-[3px] border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
+                copied === i
+                  ? "border-live-500/60 bg-live-500/10 text-live-400"
+                  : "border-ink-600 bg-ink-800 text-mist-400 hover:border-signal-500/60 hover:text-signal-400"
+              }`}
+            >
+              {copied === i ? "✓ скопир." : "copy"}
+            </button>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[12px] leading-relaxed text-mist-500">{hint}</p>
+    </div>
+  );
+}
 
 export default function App() {
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 0xffffffff));
   const [fired, setFired] = useState(false);
   const [pressing, setPressing] = useState(false);
+  const [floatDone, setFloatDone] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
 
   const hex = buildHex(seed);
@@ -65,6 +121,11 @@ export default function App() {
   const launchAll = () => {
     setPressing(true);
     setTimeout(() => setPressing(false), 260);
+    download("zapret-ustanovshik.bat", buildInstaller(seed).bat);
+    setFired(true);
+  };
+
+  const launchVse = () => {
     download("zapret-vse.bat", buildUniversalLauncher(seed));
     setFired(true);
   };
@@ -83,6 +144,13 @@ export default function App() {
   const reshuffle = () => {
     setSeed(Math.floor(Math.random() * 0xffffffff));
     setFired(false);
+  };
+
+  const floatDownload = () => {
+    download("zapret-ustanovshik.bat", buildInstaller(seed).bat);
+    setFired(true);
+    setFloatDone(true);
+    setTimeout(() => setFloatDone(false), 3200);
   };
 
   useEffect(() => {
@@ -132,28 +200,29 @@ export default function App() {
             <Reveal>
               <span className="mb-5 inline-flex items-center gap-2 rounded-[3px] border border-signal-500/40 bg-signal-500/10 px-3 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-signal-400">
                 <span className="anim-pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-signal-500" />
-                одна кнопка // zapret / winws
+                установщик в один файл // zapret / winws
               </span>
               <h1
                 className="font-display text-[clamp(30px,4.6vw,58px)] leading-[1.05] tracking-tight"
                 style={{ fontWeight: 800 }}
               >
-                <span className="block text-paper">ЖМИ КНОПКУ.</span>
-                <span className="anim-glitch block text-mist-400">БЛОКИРОВОК</span>
-                <span className="block text-signal-500">КАК НЕ БЫЛО.</span>
+                <span className="block text-paper">СКАЧАЛ. ЗАПУСТИЛ.</span>
+                <span className="anim-glitch block text-mist-400">ВЫБРАЛ ПАПКУ.</span>
+                <span className="block text-signal-500">РАБОТАЕТ.</span>
               </h1>
               <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-mist-300">
-                Скачиваешь один файл <span className="font-mono text-signal-400">zapret-vse.bat</span>, кидаешь в папку
-                zapret, запускаешь — и он чинит <span className="text-paper">весь свободный интернет</span>: ютуб,
-                дискорд, тг и всё остальное. Сам подберёт сигнатуру, проверит сеть и поставит автозапуск.
+                Один файл-установщик <span className="font-mono text-signal-400">zapret-ustanovshik.bat</span>. Запускаешь —
+                он просит показать папку zapret, <span className="text-paper">сам создаёт внутри личную стратегию</span>{" "}
+                (9 блоков как в 1.10.1, но со своими фейками и числами), сам запускает и ставит автозапуск. Ничего
+                перетаскивать не надо.
               </p>
             </Reveal>
 
             <Reveal delay={120}>
               <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11.5px] text-mist-400">
-                <span><b className="text-live-400">ВЕСЬ</b> трафик, не только ютуб/дискорд/тг</span>
-                <span><b className="text-signal-400">10</b> автопопыток подбора</span>
-                <span><b className="text-danger-400">0</b> настроек</span>
+                <span><b className="text-live-400">9</b> блоков, как в твоём 1.10.1</span>
+                <span><b className="text-signal-400">свои</b> фейки и числа</span>
+                <span><b className="text-danger-400">0</b> перетаскиваний файлов</span>
               </div>
             </Reveal>
           </div>
@@ -178,7 +247,7 @@ export default function App() {
               <div className="flex justify-center py-4">
                 <button
                   onClick={launchAll}
-                  aria-label="Запустить zapret — открыть весь интернет"
+                  aria-label="Скачать установщик zapret"
                   className={`group relative flex h-44 w-44 items-center justify-center rounded-full outline-none transition-transform duration-150 md:h-52 md:w-52 ${
                     pressing ? "scale-95" : "hover:scale-[1.04] active:scale-95"
                   }`}
@@ -189,24 +258,25 @@ export default function App() {
                   <span className="absolute inset-6 rounded-full bg-signal-500/10 blur-md transition-opacity group-hover:opacity-100" />
                   <span className="absolute inset-6 flex items-center justify-center rounded-full bg-gradient-to-br from-signal-600 via-signal-500 to-signal-400 shadow-[0_0_50px_rgba(255,122,41,0.45)] transition-shadow duration-300 group-hover:shadow-[0_0_70px_rgba(255,122,41,0.7)]">
                     <span className="flex flex-col items-center gap-1.5 text-ink-950">
-                      <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                        <path d="M7 4.5v15l13-7.5-13-7.5z" />
+                      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M12 3v11m0 0l-5-5m5 5l5-5" />
+                        <path d="M4 19h16" />
                       </svg>
-                      <span className="font-display text-[15px] font-bold tracking-[0.08em]">ЗАПУСТИТЬ</span>
+                      <span className="font-display text-[15px] font-bold tracking-[0.08em]">СКАЧАТЬ</span>
                     </span>
                   </span>
                 </button>
               </div>
 
               <p className="mt-3 text-center font-mono text-[11px] text-mist-500">
-                скачает <span className="text-signal-400">zapret-vse.bat</span> · или жми{" "}
+                скачает <span className="text-signal-400">zapret-ustanovshik.bat</span> · или жми{" "}
                 <kbd className="rounded-[3px] border border-ink-600 bg-ink-800 px-1.5 py-0.5 text-mist-300">Space</kbd>
               </p>
 
               {fired && (
                 <div className="mt-5 rounded-md border border-live-500/45 bg-live-500/10 px-4 py-3 font-mono text-[12px] leading-relaxed text-live-400">
-                  ✓ Файл скачан. Теперь: 1) положи его в корень папки zapret → 2) двойной клик → 3) «Да» на UAC.
-                  Сигнатура {hex} — твоя личная, никому не передавай.
+                  ✓ Установщик скачан. Запусти его → «Да» на права → выбери папку zapret. Он сам создаст личную
+                  стратегию <span className="text-paper">general (SVOI {hex}).bat</span> и всё запустит.
                 </div>
               )}
 
@@ -216,6 +286,12 @@ export default function App() {
                   другие сборки
                 </p>
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={launchVse}
+                    className="rounded-[4px] border border-ink-600 bg-ink-800 px-3.5 py-2 font-mono text-[11.5px] text-mist-300 transition-all hover:-translate-y-0.5 hover:border-live-500/60 hover:text-live-400"
+                  >
+                    ↓ zapret-vse.bat <span className="text-mist-500">(весь трафик, без списков)</span>
+                  </button>
                   <button
                     onClick={launchAuto}
                     className="rounded-[4px] border border-ink-600 bg-ink-800 px-3.5 py-2 font-mono text-[11.5px] text-mist-300 transition-all hover:-translate-y-0.5 hover:border-live-500/60 hover:text-live-400"
@@ -265,6 +341,76 @@ export default function App() {
         </div>
       </section>
 
+      {/* ===== zapret vs hiddify ===== */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
+        <Reveal>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="font-display text-[clamp(20px,2.6vw,30px)] font-bold tracking-tight text-paper">
+              <span className="text-live-400">zapret</span> или <span className="text-danger-400">hiddify</span>?
+            </h2>
+            <span className="font-mono text-[11px] text-mist-500">почему у VPN пинг 500+, а у zapret ~0</span>
+          </div>
+        </Reveal>
+        <PingLab />
+      </section>
+
+      {/* ===== strategy lab ===== */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
+        <Reveal>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="font-display text-[clamp(20px,2.6vw,30px)] font-bold tracking-tight text-paper">
+              Разбор <span className="text-signal-400">твоей стратегии</span>
+            </h2>
+            <span className="font-mono text-[11px] text-mist-500">
+              multi-block 1.10.x → личный general (SVOI).bat
+            </span>
+          </div>
+        </Reveal>
+        <StrategyLab />
+      </section>
+
+      {/* ===== console launch ===== */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
+        <Reveal>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="font-display text-[clamp(20px,2.6vw,30px)] font-bold tracking-tight text-paper">
+              Запуск <span className="text-live-400">через консоль</span>
+            </h2>
+            <span className="font-mono text-[11px] text-mist-500">введи свой путь — команды обновятся</span>
+          </div>
+        </Reveal>
+        <Console />
+      </section>
+
+      {/* ===== dump structure for analysis ===== */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
+        <Reveal>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="font-display text-[clamp(20px,2.6vw,30px)] font-bold tracking-tight text-paper">
+              Дамп файлов: соберу <span className="text-signal-500">под твою сборку</span>
+            </h2>
+            <span className="font-mono text-[11px] text-mist-500">3 команды → вывод в чат</span>
+          </div>
+        </Reveal>
+        <div className="grid gap-4 md:grid-cols-3">
+          {DUMPS.map((d, i) => (
+            <Reveal key={d.n} delay={i * 80}>
+              <DumpCard {...d} />
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={160}>
+          <div className="mt-4 flex items-start gap-3 rounded-md border border-live-500/35 bg-live-500/[0.06] px-5 py-4">
+            <span className="anim-pulse-dot mt-1.5 h-2 w-2 shrink-0 rounded-full bg-live-500" />
+            <p className="text-[13px] leading-relaxed text-mist-300">
+              Скинь вывод всех трёх команд <b className="text-paper">одним сообщением в чат</b>. Я разберу точный
+              синтаксис флагов твоей версии winws, пути и списки — и сгенерирую личный лаунчер{" "}
+              <b className="text-live-400">один в один под твою папку</b>, включая автообновление списков.
+            </p>
+          </div>
+        </Reveal>
+      </section>
+
       {/* ===== live inspector ===== */}
       <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
@@ -289,12 +435,45 @@ export default function App() {
                 </li>
               </ul>
               <p className="mt-1 border-t border-ink-700 pt-3 font-mono text-[11.5px] text-mist-500">
-                Единственное требование: рядом должен лежать <span className="text-mist-300">bin\winws.exe</span> из zapret.
+                Единственное требование: батник лежит в папке zapret — движок{" "}
+                <span className="text-mist-300">winws.exe</span> он найдёт сам, даже в{" "}
+                <span className="text-mist-300">binaries\windows-x86_64\winws\</span>.
               </p>
             </div>
           </Reveal>
         </div>
       </section>
+
+      {/* ===== floating download — всегда видна ===== */}
+      <button
+        onClick={floatDownload}
+        aria-label="Скачать установщик zapret"
+        className={`group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-full border px-5 py-3.5 shadow-[0_14px_44px_-10px_rgba(255,122,41,0.55)] transition-all duration-200 hover:-translate-y-1 active:scale-95 ${
+          floatDone
+            ? "border-live-500/70 bg-ink-850 text-live-400"
+            : "border-signal-400/60 bg-gradient-to-br from-signal-600 via-signal-500 to-signal-400 text-ink-950"
+        }`}
+      >
+        <span className="anim-pulse-dot absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-ink-950 bg-live-500" />
+        {floatDone ? (
+          <>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+              <path d="M4 12.5l5.5 5.5L20 6.5" />
+            </svg>
+            <span className="font-mono text-[12.5px] font-bold tracking-wide">СКАЧАНО!</span>
+          </>
+        ) : (
+          <>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
+              <path d="M12 3v12m0 0l-5-5m5 5l5-5" />
+              <path d="M4 19h16" />
+            </svg>
+            <span className="font-display text-[13px] font-bold tracking-wide">
+              установщик.bat
+            </span>
+          </>
+        )}
+      </button>
 
       {/* ===== footer ===== */}
       <footer className="relative z-10 border-t border-ink-700/70 bg-ink-950/70">
