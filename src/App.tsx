@@ -206,9 +206,10 @@ export default function App() {
                 className="font-display text-[clamp(30px,4.6vw,58px)] leading-[1.05] tracking-tight"
                 style={{ fontWeight: 800 }}
               >
-                <span className="block text-paper">СКАЧАЛ, ЗАПУСТИЛ,</span>
-                <span className="anim-glitch block text-mist-400">ВЫБРАЛ ПАПКУ —</span>
-                <span className="block text-signal-500">РАБОТАЕТ</span>
+                <span className="block text-paper">СКАЧАЛ</span>
+                <span className="anim-glitch block text-mist-400">ЗАПУСТИЛ</span>
+                <span className="block text-paper">ВЫБРАЛ ПАПКУ</span>
+                <span className="block text-signal-500">И все РАБОТАЕТ</span>
               </h1>
               <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-mist-300">
                 Скачиваешь один файл <span className="font-mono text-signal-400">zapret-ustanovshik.bat</span>. Он сам
