@@ -209,7 +209,7 @@ export default function App() {
                 <span className="block text-paper">СКАЧАЛ</span>
                 <span className="anim-glitch block text-mist-400">ЗАПУСТИЛ</span>
                 <span className="block text-paper">ВЫБРАЛ ПАПКУ</span>
-                <span className="block text-signal-500">И все РАБОТАЕТ</span>
+                <span className="block text-signal-500">И ВСЁ РАБОТАЕТ</span>
               </h1>
               <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-mist-300">
                 Скачиваешь один файл <span className="font-mono text-signal-400">zapret-ustanovshik.bat</span>. Он сам
