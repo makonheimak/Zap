@@ -200,29 +200,29 @@ export default function App() {
             <Reveal>
               <span className="mb-5 inline-flex items-center gap-2 rounded-[3px] border border-signal-500/40 bg-signal-500/10 px-3 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-signal-400">
                 <span className="anim-pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-signal-500" />
-                установщик в один файл // zapret / winws
+                авто-установщик · один файл · zapret / winws
               </span>
               <h1
                 className="font-display text-[clamp(30px,4.6vw,58px)] leading-[1.05] tracking-tight"
                 style={{ fontWeight: 800 }}
               >
-                <span className="block text-paper">СКАЧАЛ. ЗАПУСТИЛ.</span>
-                <span className="anim-glitch block text-mist-400">ВЫБРАЛ ПАПКУ.</span>
-                <span className="block text-signal-500">РАБОТАЕТ.</span>
+                <span className="block text-paper">СКАЧАЛ, ЗАПУСТИЛ,</span>
+                <span className="anim-glitch block text-mist-400">ВЫБРАЛ ПАПКУ —</span>
+                <span className="block text-signal-500">РАБОТАЕТ</span>
               </h1>
               <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-mist-300">
-                Один файл-установщик <span className="font-mono text-signal-400">zapret-ustanovshik.bat</span>. Запускаешь —
-                он просит показать папку zapret, <span className="text-paper">сам создаёт внутри личную стратегию</span>{" "}
-                (9 блоков как в 1.10.1, но со своими фейками и числами), сам запускает и ставит автозапуск. Ничего
-                перетаскивать не надо.
+                Скачиваешь один файл <span className="font-mono text-signal-400">zapret-ustanovshik.bat</span>. Он сам
+                спросит, где лежит твой zapret, сам создаст внутри{" "}
+                <span className="text-paper">личную стратегию на основе версии 1.10.1</span>, сам запустит и поставит
+                автозапуск. Перетаскивать и настраивать ничего не нужно.
               </p>
             </Reveal>
 
             <Reveal delay={120}>
               <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11.5px] text-mist-400">
-                <span><b className="text-live-400">9</b> блоков, как в твоём 1.10.1</span>
-                <span><b className="text-signal-400">свои</b> фейки и числа</span>
-                <span><b className="text-danger-400">0</b> перетаскиваний файлов</span>
+                <span><b className="text-live-400">9</b> блоков — как в твоём 1.10.1</span>
+                <span><b className="text-signal-400">13</b> фейк-файлов из твоего bin</span>
+                <span><b className="text-danger-400">0</b> настроек и перетаскиваний</span>
               </div>
             </Reveal>
           </div>
@@ -235,7 +235,7 @@ export default function App() {
             >
               <div className="mb-5 flex items-center justify-between">
                 <span className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-mist-500">
-                  пульт запуска
+                  твой установщик
                 </span>
                 <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-live-400">
                   <span className="anim-pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-live-500" />
@@ -269,7 +269,7 @@ export default function App() {
               </div>
 
               <p className="mt-3 text-center font-mono text-[11px] text-mist-500">
-                скачает <span className="text-signal-400">zapret-ustanovshik.bat</span> · или жми{" "}
+                файл <span className="text-signal-400">zapret-ustanovshik.bat</span> · вместо клика —{" "}
                 <kbd className="rounded-[3px] border border-ink-600 bg-ink-800 px-1.5 py-0.5 text-mist-300">Space</kbd>
               </p>
 
@@ -283,7 +283,7 @@ export default function App() {
               {/* other builds */}
               <div className="mt-6 border-t border-ink-700 pt-4">
                 <p className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-mist-500">
-                  другие сборки
+                  запасные варианты
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -321,7 +321,7 @@ export default function App() {
       <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
         <Reveal>
           <h2 className="mb-6 font-display text-[clamp(20px,2.6vw,30px)] font-bold tracking-tight text-paper">
-            От нажатия до «<span className="text-signal-500">работает всё</span>»
+            Три шага — и интернет <span className="text-signal-500">свободен</span>
           </h2>
         </Reveal>
         <div className="space-y-3">
